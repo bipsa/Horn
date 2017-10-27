@@ -16,8 +16,8 @@ class ViewController: UIViewController {
         session.name = "Sebastian"
         session.lastname = "Romero"
         _ = session.save()
-        
-        if let sessions = Session.find(attributes: [["name", "Sebastian"]]) as? [Session] {
+        print(Session.all(), Session.count(attributes: [["name", "= 'Sebastian'"]]))
+        if let sessions = Session.find(attributes: [["name", "= 'Sebastian'"]]) as? [Session] {
             for session in sessions {
                 print(session.name ?? "")
             }

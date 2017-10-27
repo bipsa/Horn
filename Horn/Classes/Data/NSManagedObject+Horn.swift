@@ -21,7 +21,7 @@ extension NSManagedObject {
     
     
     class func createUnique(attribute:String, value:String) -> Self {
-        let response = find(attributes: [[attribute, value]])
+        let response = find(attributes: [[attribute, "=\(value)"]])
         if response.count > 0 {
             return safeResponse(response: response)!
         }
@@ -119,34 +119,15 @@ extension NSManagedObject {
     
     
     
-    /// Returns count of elements
-    ///
-    /// - returns: int of total of elements
-    class func count() -> Int {
-        var count: Int = 0
-        CoreDataManager.sharedManager.context.performAndWait {
-            let request = NSFetchRequest<NSFetchRequestResult>(entityName: className())
-            request.resultType = NSFetchRequestResultType.countResultType
-            do {
-                count = try CoreDataManager.sharedManager.context.count(for: request)
-            } catch {
-                count = 0
-            }
-        }
-        return count
-    }
-    
-    
-    
-    class func find(attributes:[[String]],
-                    limit:Int = 0,
-                    offset:Int = 0,
-                    order:String? = nil,
-                    ascending:Bool = true) -> [NSManagedObject]{
+    internal class func getRequest(attributes:[[String]],
+                          order:String? = nil,
+                          ascending:Bool = true,
+                          limit:Int = 0,
+                          offset:Int = 0) -> NSFetchRequest<NSFetchRequestResult> {
         let request = NSFetchRequest<NSFetchRequestResult>(entityName: className())
         var predicates:[NSPredicate] = []
         for attribute in attributes {
-            let predicate = NSPredicate(format: "(\(attribute[0]) == %@)", attribute[1])
+            let predicate = NSPredicate(format: "(\(attribute[0]) \(attribute[1]))")
             predicates.append(predicate)
         }
         let predicate:NSPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
@@ -155,10 +136,21 @@ extension NSManagedObject {
             let sortDescriptor = NSSortDescriptor(key: validOrder, ascending: ascending)
             request.sortDescriptors = [sortDescriptor]
         }
-        if limit > 0 && offset > 0{
+        if limit > 0 {
             request.fetchLimit = limit
             request.fetchOffset =  offset
         }
+        return request
+    }
+    
+    
+    
+    class func find(attributes:[[String]],
+                    order:String? = nil,
+                    ascending:Bool = true,
+                    limit:Int = 0,
+                    offset:Int = 0) -> [NSManagedObject]{
+        let request = getRequest(attributes: attributes, order: order, ascending: ascending, limit: limit, offset: offset)
         do {
             guard let objects = try CoreDataManager.sharedManager.context.fetch(request) as? [NSManagedObject] else {
                 return []
@@ -168,6 +160,20 @@ extension NSManagedObject {
             return []
         }
     }
+    
+    
+    
+    class func count(attributes:[[String]]) -> Int {
+        let request = getRequest(attributes: attributes)
+        var count = 0
+        do {
+            count = try CoreDataManager.sharedManager.context.count(for: request)
+        } catch {
+            count = 0
+        }
+        return count
+    }
+
     
     
     
